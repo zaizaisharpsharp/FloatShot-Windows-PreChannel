@@ -1,0 +1,40 @@
+name: Build FloatShot for Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'FloatShot.csproj'
+      - 'src/**'
+      - 'assets/**'
+      - 'scripts/**'
+      - '.github/workflows/windows-ci.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Compile and publish Win-x64
+        shell: pwsh
+        run: |
+          dotnet publish FloatShot.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=false -o dist
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path dist/FloatShot.exe)) { throw "FloatShot.exe not created" }
+      - name: Upload build artifact for testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: FloatShot-win-x64-unverified
+          path: dist/
+          retention-days: 14
